@@ -498,7 +498,7 @@ le_result_t le_ulpm_ShutDown
     if (pm_CheckWakeLock())
     {
         LE_ERROR("Wakelock held!! System can't be shut down. Try again.");
-        return LE_UNAVAILABLE;
+        return LE_NOT_POSSIBLE;
     }
 
     le_framework_NotifyExpectedReboot();
