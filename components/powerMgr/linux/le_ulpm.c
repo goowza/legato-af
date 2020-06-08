@@ -47,7 +47,7 @@
  * Value need to be written in sysfs to enter ultra low power mode.
  */
 //--------------------------------------------------------------------------------------------------
-#define ULPM_ENABLE_VAL     "1"
+static uint32_t shutdown_value = LE_ULPM_PSM_WITH_ULPM_FALLBACK;
 
 
 //--------------------------------------------------------------------------------------------------
@@ -486,6 +486,7 @@ le_result_t le_ulpm_GetFirmwareVersion
  *      - LE_UNAVAILABLE if shutting is not possible now. Try again.
  *      - LE_NOT_PERMITTED if the process lacks sufficient permissions to perform a shutdown.
  *      - LE_UNSUPPORTED if the device lacks the ability to shutdown via ULPM.
+ *      - LE_BAD_PARAMETER if specified shutdown value is not valid.
  *      - LE_FAULT if there is a non-specific failure.
  */
 //--------------------------------------------------------------------------------------------------
@@ -502,10 +503,15 @@ le_result_t le_ulpm_ShutDown
 
     le_framework_NotifyExpectedReboot();
 
-    // No one holding the wakelock. Now write to sysfs file to enter ultra low power mode.
-    le_result_t result = WriteToSysfs(SHUTDOWN_INIT_FILE, ULPM_ENABLE_VAL);
+    // Convert shutdown value to a string
+    char shutdown_value_str[12];
+    if (sprintf(shutdown_value_str, "%d", shutdown_value) < 0)
+        return LE_BAD_PARAMETER;
 
-    LE_FATAL_IF(result == LE_BAD_PARAMETER, "Shutdown value (%s) rejected", ULPM_ENABLE_VAL);
+    // No one holding the wakelock. Now write to sysfs file to enter ultra low power mode.
+    le_result_t result = WriteToSysfs(SHUTDOWN_INIT_FILE, shutdown_value_str);
+
+    LE_FATAL_IF(result == LE_BAD_PARAMETER, "Shutdown value (%s) rejected", shutdown_value_str);
 
     if (result == LE_NOT_FOUND)
     {
@@ -542,4 +548,18 @@ le_result_t le_ulpm_Reboot
 
     LE_ERROR("Failed to reboot!");
     return LE_FAULT;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the Low Power Mode configuration to apply when le_ulpm_ShutDown is called.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+void le_ulpm_SetShutDownValue
+(
+    const le_ulpm_ULPSConfiguration_t ulps_config  ///< [IN] Value used to configure ULPS
+)
+{
+    shutdown_value = ulps_config;
 }
